@@ -10,6 +10,7 @@
 #include <GLFW/glfw3.h>
 
 #define GLM_FORCE_RADIANS
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -23,9 +24,7 @@ struct color_t {
 // nonedit.cpp
 GLFWwindow *initGLFW(int width, int height);
 GLuint     LoadShaders(const char *vertex_file_path, const char *fragment_file_path);
-struct VAO *create3DObject(GLenum primitive_mode, int numVertices, const GLfloat *vertex_buffer_data, const GLfloat *color_buffer_data, GLenum fill_mode = GL_FILL);
-struct VAO *create3DObject(GLenum primitive_mode, int numVertices, const GLfloat *vertex_buffer_data, const GLfloat red, const GLfloat green, const GLfloat blue, GLenum fill_mode = GL_FILL);
-struct VAO *create3DObject(GLenum primitive_mode, int numVertices, const GLfloat *vertex_buffer_data, const color_t color, GLenum fill_mode = GL_FILL);
+struct VAO *create3DObject(GLenum primitive_mode, int numVertices, int numIndices, const GLfloat *vertex_buffer_data, const GLuint *indices_buffer_data, const GLfloat *color_buffer_data, GLenum fill_mode = GL_FILL);
 void       draw3DObject(struct VAO *vao);
 
 // input.cpp
@@ -43,11 +42,13 @@ void reshapeWindow(GLFWwindow *window, int width, int height);
 struct VAO {
     GLuint VertexArrayID;
     GLuint VertexBuffer;
+    GLuint IndicesBuffer;
     GLuint ColorBuffer;
 
     GLenum PrimitiveMode;
     GLenum FillMode;
     int    NumVertices;
+    int    NumIndices;
 };
 typedef struct VAO VAO;
 
@@ -72,6 +73,8 @@ struct bounding_box_t {
 };
 
 bool detect_collision(bounding_box_t a, bounding_box_t b);
+void toggle_object_rotate();
+void spin();
 
 extern float screen_zoom, screen_center_x, screen_center_y;
 void reset_screen();

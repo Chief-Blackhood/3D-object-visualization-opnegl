@@ -7,6 +7,7 @@
 #include <GLFW/glfw3.h>
 
 #define GLM_FORCE_RADIANS
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -22,7 +23,7 @@ GLFWwindow*initGLFW(int width, int height) {
 
     glfwSetErrorCallback(error_callback);
     if (!glfwInit()) {
-        // exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,                 3);
@@ -34,7 +35,7 @@ GLFWwindow*initGLFW(int width, int height) {
 
     if (!window) {
         glfwTerminate();
-        // exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
 
     glfwMakeContextCurrent(window);
@@ -148,16 +149,18 @@ GLuint LoadShaders(const char *vertex_file_path, const char *fragment_file_path)
 
 
 /* Generate VAO, VBOs and return VAO handle */
-struct VAO *create3DObject(GLenum primitive_mode, int numVertices, const GLfloat *vertex_buffer_data, const GLfloat *color_buffer_data, GLenum fill_mode) {
+struct VAO *create3DObject(GLenum primitive_mode, int numVertices, int numIndices, const GLfloat *vertex_buffer_data, const GLuint *indices_buffer_data, const GLfloat *color_buffer_data, GLenum fill_mode) {
     struct VAO *vao = new struct VAO;
     vao->PrimitiveMode = primitive_mode;
     vao->NumVertices   = numVertices;
+    vao->NumIndices    = numIndices;
     vao->FillMode      = fill_mode;
 
     // Create Vertex Array Object
     // Should be done after CreateWindow and before any other GL calls
     glGenVertexArrays(1, &(vao->VertexArrayID)); // VAO
     glGenBuffers (1, &(vao->VertexBuffer)); // VBO - vertices
+    glGenBuffers (1, &(vao->IndicesBuffer));
     glGenBuffers (1, &(vao->ColorBuffer)); // VBO - colors
 
     glBindVertexArray (vao->VertexArrayID); // Bind the VAO
@@ -171,6 +174,9 @@ struct VAO *create3DObject(GLenum primitive_mode, int numVertices, const GLfloat
         0,                            // stride
         (void *) 0                      // array buffer offset
     );
+
+    glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, vao->IndicesBuffer); // Bind the VBO vertices
+    glBufferData (GL_ELEMENT_ARRAY_BUFFER, 3 * numIndices * sizeof(GLuint), indices_buffer_data, GL_STATIC_DRAW); // Copy the vertices into VBO
 
     glBindBuffer (GL_ARRAY_BUFFER, vao->ColorBuffer); // Bind the VBO colors
     glBufferData (GL_ARRAY_BUFFER, 3 * numVertices * sizeof(GLfloat), color_buffer_data, GL_STATIC_DRAW); // Copy the vertex colors
@@ -186,22 +192,6 @@ struct VAO *create3DObject(GLenum primitive_mode, int numVertices, const GLfloat
     return vao;
 }
 
-/* Generate VAO, VBOs and return VAO handle - Common Color for all vertices */
-struct VAO *create3DObject(GLenum primitive_mode, int numVertices, const GLfloat *vertex_buffer_data, const GLfloat red, const GLfloat green, const GLfloat blue, GLenum fill_mode) {
-    GLfloat *color_buffer_data = new GLfloat[3 * numVertices];
-    for (int i = 0; i < numVertices; i++) {
-        color_buffer_data[3 * i]     = red;
-        color_buffer_data[3 * i + 1] = green;
-        color_buffer_data[3 * i + 2] = blue;
-    }
-
-    return create3DObject(primitive_mode, numVertices, vertex_buffer_data, color_buffer_data, fill_mode);
-}
-
-struct VAO *create3DObject(GLenum primitive_mode, int numVertices, const GLfloat *vertex_buffer_data, const color_t color, GLenum fill_mode) {
-    return create3DObject(primitive_mode, numVertices, vertex_buffer_data, color.r / 256.0, color.g / 256.0, color.b / 256.0, fill_mode);
-}
-
 /* Render the VBOs handled by VAO */
 void draw3DObject(struct VAO *vao) {
     // Change the Fill Mode for this object
@@ -212,14 +202,10 @@ void draw3DObject(struct VAO *vao) {
 
     // Enable Vertex Attribute 0 - 3d Vertices
     glEnableVertexAttribArray(0);
-    // Bind the VBO to use
-    glBindBuffer(GL_ARRAY_BUFFER, vao->VertexBuffer);
 
     // Enable Vertex Attribute 1 - Color
     glEnableVertexAttribArray(1);
-    // Bind the VBO to use
-    glBindBuffer(GL_ARRAY_BUFFER, vao->ColorBuffer);
 
     // Draw the geometry !
-    glDrawArrays(vao->PrimitiveMode, 0, vao->NumVertices); // Starting from vertex 0; 3 vertices total -> 1 triangle
+    glDrawElements(vao->PrimitiveMode, 3 * vao->NumIndices, GL_UNSIGNED_INT, nullptr); // Starting from vertex 0; 3 vertices total -> 1 triangle
 }
